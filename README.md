@@ -1,4 +1,4 @@
-# Nmap vulners scan data to elasticsearch (with kiaban dashboards)
+# Nmap vulners scan data to elasticsearch (with Kibana dashboards)
 The script displays the information from the nmap voluners scan in the ELK stack
 
 # Preview:
