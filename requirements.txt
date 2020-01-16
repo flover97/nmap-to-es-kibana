@@ -1,0 +1,5 @@
+Requirements for Debian 9
+
+apt-get install python3 python3-pip nmap git 
+
+pip3 install --no-cache-dir xmltodict elasticsearch
