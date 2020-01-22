@@ -2,7 +2,6 @@
 
 ############SET THIS VARS############
 script_dir=/opt/nmap-vulners-es
-temp_dir=/tmp/vulners
 es_host=localhost
 #####################################
 
@@ -11,9 +10,10 @@ xml_dir=$script_dir/xml_files/$current_time
 
 cd $script_dir || { echo 'Wrong script dir (set vars in run.sh)' ; exit 1; }
 
-git clone https://github.com/vulnersCom/nmap-vulners $temp_dir
-mv $temp_dir /usr/share/nmap/scripts/vulners && nmap --script-updatedb
-rm -rf $temp_dir
+cd /usr/share/nmap/scripts
+
+wget -O vulners.nse https://raw.githubusercontent.com/vulnersCom/nmap-vulners/master/vulners.nse && nmap --script-updatedb
+
 mkdir $script_dir/xml_files
 mkdir $xml_dir
 
@@ -25,7 +25,7 @@ get_filename(){
 #Genearate nmap XML output
 while IFS= read -r line
 do
-  nmap -sV -oX $xml_dir/$line".xml" -oN - -v1 "$@" --script=vulners/vulners.nse $line
+  nmap -sV -oX $xml_dir/$line".xml" -oN - -v1 "$@" --script=vulners.nse $line
 done < $script_dir/ips.txt
 
 #Send nmap XML output to Elasticsearch
@@ -35,3 +35,5 @@ do
     echo "Processing $f file..."
     python3 $script_dir/VulntoES.py -i $f -e $es_host -r nmap -I nmap-vuln-to-es
 done
+
+find $script_dir/xml_files/* -type d -ctime +7 -exec rm -rf {} \;
