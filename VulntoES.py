@@ -8,6 +8,7 @@ import re
 import json
 import time
 import getopt
+import hashlib
 import xml.etree.ElementTree as xml
 
 
@@ -18,7 +19,7 @@ class NmapES:
 		self.input_file = input_file
 		self.tree = self.__importXML()
 		self.root = self.tree.getroot()
-		self.es = Elasticsearch([{'host':es_ip,'port':es_port}])
+		self.es = Elasticsearch([f'http://{es_ip}:{es_port}'])
 		self.index_name = index_name
 
 	def displayInputFileName(self):
@@ -45,18 +46,18 @@ class NmapES:
 						dict_item['mac'] = c.attrib['addr']
 
 				elif c.tag == 'hostnames':
-					for names in c.getchildren():
+					for names in list(c):
 						if names.attrib['name']:
 							dict_item['hostname'] = names.attrib['name']
 
 				elif c.tag == 'ports':
-					for port in c.getchildren():
+					for port in list(c):
 						dict_item_ports = {}
 						if port.tag == 'port':
 							# print(port.tag, port.attrib)
 							dict_item_ports['port'] = port.attrib['portid']
 							dict_item_ports['protocol'] = port.attrib['protocol']
-							for p in port.getchildren():
+							for p in list(port):
 								if p.tag == 'state':
 									dict_item_ports['state'] = p.attrib['state']
 								elif p.tag == 'service':
@@ -78,7 +79,16 @@ class NmapES:
 													
 							to_upload = merge_two_dicts(dict_item, dict_item_ports)	
 							if to_upload['state'] == 'open':
-								self.es.index(index=self.index_name, doc_type="vuln", body=json.dumps(to_upload))
+								self.es.index(index=self.index_name, id=calc_id(to_upload), document=json.dumps(to_upload))
+
+def calc_id(item):
+	sha1sum = hashlib.sha1()
+	sha1sum.update(json.dumps({
+			k: v
+			for k, v in item.items()
+			if k in ["ip", "port", "protocol", "state"]
+		}, sort_keys=True).encode("UTF-8"))
+	return sha1sum.hexdigest()
 
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
